@@ -1,0 +1,11 @@
+__pycache__/
+.vscode/
+build/
+dist/
+*.spec
+*.c
+*.h
+*.exe
+*.txt
+p10
+scheduler
