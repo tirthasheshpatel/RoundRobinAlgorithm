@@ -438,18 +438,19 @@ class RoundRobin(tk.Tk):
                 break
             while (
                 self.new_tasks
-                and self.new_tasks[0].process_object.arrival_time <= time_elapsed + 1
+                and self.new_tasks[0].process_object.arrival_time <= time_elapsed+1
             ):
                 task = self.new_tasks.pop(0)
                 task.process_object.last_preempted = time_elapsed
                 task.process_object.waiting_time = (
                     time_elapsed - task.process_object.arrival_time
                 )
+                task.process_object.admitted_time = time_elapsed
+                # task.process_object.waiting_time = 0
                 task.process_object.runtime = 0
                 self.set_task_color(len(self.tasks) + 1, task)
                 task.pack(side=tk.TOP, fill=tk.X)
                 self.tasks.append(task)
-            PREEMTED_OR_TERMINATED = 0
             if not self.tasks:
                 self.placeholder_text.config(
                     text=f"Time Elapsed: {time_elapsed}\nCPU Idle"
@@ -478,7 +479,6 @@ class RoundRobin(tk.Tk):
                         task_object.last_preempted = time_elapsed
                         self.terminated_tasks.append(task)
                         task.pack_forget()
-                        PREEMTED_OR_TERMINATED = 1
                         break
                     elif runtime == time_quantum:
                         task_object.last_preempted = time_elapsed
@@ -489,7 +489,6 @@ class RoundRobin(tk.Tk):
                             text=f"Time Elapsed: {time_elapsed}\n"
                             f"Process {task_object.pid} Preempted"
                         )
-                        PREEMTED_OR_TERMINATED = 1
                         break
                     self.placeholder_text.config(
                         text=f"Time Elapsed: {time_elapsed}\n"
@@ -502,8 +501,7 @@ class RoundRobin(tk.Tk):
                     task_object.runtime += UNIT
                     time_elapsed += UNIT
                     time.sleep(0.5)
-            if not PREEMTED_OR_TERMINATED:
-                time_elapsed += UNIT
+            time_elapsed += UNIT
             time.sleep(0.5)
 
 
