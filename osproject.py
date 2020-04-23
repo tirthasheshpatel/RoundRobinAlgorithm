@@ -96,10 +96,10 @@ class Process(object):
 
     def get_meta(self):
         msg = (
-               f"Burst time:        {self.burst_time}\n"
-               f"Total Runtime:     {self.runtime}\n"
-               f"Waiting Time:      {self.waiting_time}\n"
-               f"Terminated:        {self.terminated_time}"
+            f"Burst time:   \t{self.burst_time}\n"
+            f"Total Runtime:\t{self.runtime}\n"
+            f"Waiting Time: \t{self.waiting_time}\n"
+            f"Terminated:   \t{self.terminated_time}"
         )
         return msg
 
@@ -108,9 +108,9 @@ class Process(object):
         # PID: <process.id>
         # Burst Time: <process.burst_time>
         # Arrival Time: <process.arrival_time>
-        msg  = f"PID:               {self.pid}\n"
-        msg += f"Burst Time:        {self.burst_time}\n"
-        msg += f"Arrival Time:      {self.arrival_time}"
+        msg = f"PID:\t\t{self.pid}\n"
+        msg += f"Burst Time:\t{self.burst_time}\n"
+        msg += f"Arrival Time:\t{self.arrival_time}"
         if self.terminated_time is not None:
             msg += "\n"
             msg += self.get_meta()
@@ -206,6 +206,7 @@ class RoundRobin(tk.Tk):
             bg="lightgrey",
             fg="black",
             pady=10,
+            font=("Verdana", 12),
         )
 
         # We then bind the delete button with the placeholder and
@@ -284,13 +285,30 @@ class RoundRobin(tk.Tk):
 
     def calculate_metrics(self):
         """Calculates throughput, average turnaround time and average waiting time"""
-        self.throughput = statistics.mean([float(task.process_object.terminated_time) for task in self.terminated_tasks])
-        self.avg_turnaround_time = statistics.mean([float(task.process_object.terminated_time - task.process_object.admitted_time) for task in self.terminated_tasks])
-        self.avg_waiting_time = statistics.mean([float(task.process_object.waiting_time) for task in self.terminated_tasks])
-        self.placeholder_text.config(text=f"Throughput           :   {self.throughput:.4f}\n"
-                                          f"Avg. TurnAround Time :   {self.avg_turnaround_time:.4f}\n"
-                                          f"Avg. Waiting Time    :   {self.avg_waiting_time:.4f}\n"
-                                          f"No latency assumed. So, time to context switch is 0.")
+        self.throughput = statistics.mean(
+            [
+                float(task.process_object.terminated_time)
+                for task in self.terminated_tasks
+            ]
+        )
+        self.avg_turnaround_time = statistics.mean(
+            [
+                float(
+                    task.process_object.terminated_time
+                    - task.process_object.admitted_time
+                )
+                for task in self.terminated_tasks
+            ]
+        )
+        self.avg_waiting_time = statistics.mean(
+            [float(task.process_object.waiting_time) for task in self.terminated_tasks]
+        )
+        self.placeholder_text.config(
+            text=f"Throughput           :   {self.throughput:.4f}\n"
+            f"Avg. TurnAround Time :   {self.avg_turnaround_time:.4f}\n"
+            f"Avg. Waiting Time    :   {self.avg_waiting_time:.4f}\n"
+            f"No latency assumed. So, time to context switch is 0."
+        )
 
     def save_results(self):
         try:
@@ -354,7 +372,11 @@ class RoundRobin(tk.Tk):
             # Parse the task just arrived and create a process
             arrived_task = self.make_task(task_text)
             new_task = tk.Label(
-                arrived_task, self.tasks_frame, text=arrived_task, pady=10
+                arrived_task,
+                self.tasks_frame,
+                text=arrived_task,
+                pady=10,
+                font=("Verdana", 12),
             )
 
             self.set_task_color(len(self.tasks) + 1, new_task)
@@ -438,7 +460,7 @@ class RoundRobin(tk.Tk):
                 break
             while (
                 self.new_tasks
-                and self.new_tasks[0].process_object.arrival_time <= time_elapsed+1
+                and self.new_tasks[0].process_object.arrival_time <= time_elapsed
             ):
                 task = self.new_tasks.pop(0)
                 task.process_object.last_preempted = time_elapsed
@@ -451,6 +473,7 @@ class RoundRobin(tk.Tk):
                 self.set_task_color(len(self.tasks) + 1, task)
                 task.pack(side=tk.TOP, fill=tk.X)
                 self.tasks.append(task)
+            PREEMTED_OR_TERMINATED = 0
             if not self.tasks:
                 self.placeholder_text.config(
                     text=f"Time Elapsed: {time_elapsed}\nCPU Idle"
@@ -479,6 +502,7 @@ class RoundRobin(tk.Tk):
                         task_object.last_preempted = time_elapsed
                         self.terminated_tasks.append(task)
                         task.pack_forget()
+                        PREEMTED_OR_TERMINATED = 1
                         break
                     elif runtime == time_quantum:
                         task_object.last_preempted = time_elapsed
@@ -489,11 +513,12 @@ class RoundRobin(tk.Tk):
                             text=f"Time Elapsed: {time_elapsed}\n"
                             f"Process {task_object.pid} Preempted"
                         )
+                        PREEMTED_OR_TERMINATED = 1
                         break
                     self.placeholder_text.config(
-                        text=f"Time Elapsed: {time_elapsed}\n"
-                        f"Running Process {task_object.pid}\n"
-                        f"Runtime in this cycle: {runtime}\n"
+                        text=f"Time Elapsed:\t\t{time_elapsed}\n"
+                        f"Running Process\t\t{task_object.pid}\n"
+                        f"Runtime in this cycle:\t{runtime}\n"
                         f"Other Meta Information:\n"
                         f"{task_object.get_meta()}"
                     )
@@ -501,7 +526,8 @@ class RoundRobin(tk.Tk):
                     task_object.runtime += UNIT
                     time_elapsed += UNIT
                     time.sleep(2)
-            time_elapsed += UNIT
+            if not PREEMTED_OR_TERMINATED:
+                time_elapsed += UNIT
             time.sleep(2)
 
 
