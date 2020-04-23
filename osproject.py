@@ -500,9 +500,9 @@ class RoundRobin(tk.Tk):
                     runtime += UNIT
                     task_object.runtime += UNIT
                     time_elapsed += UNIT
-                    time.sleep(0.5)
+                    time.sleep(2)
             time_elapsed += UNIT
-            time.sleep(0.5)
+            time.sleep(2)
 
 
 if __name__ == "__main__":
