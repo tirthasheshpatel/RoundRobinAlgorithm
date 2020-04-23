@@ -72,6 +72,7 @@ class Process(object):
     arrival_time: float
         The arrival time of the process.
     """
+
     def __init__(self, pid, burst_time, arrival_time):
         self.pid = pid
         self.burst_time = burst_time
@@ -86,10 +87,12 @@ class Process(object):
         self.runtime = None
 
     def get_meta(self):
-        msg = (f"Burst time: {self.burst_time}\n"
-               f"Total Runtime: {self.runtime}\n"
-               f"Waiting Time: {self.waiting_time}\n"
-               f"Terminated: {self.terminated_time}\n")
+        msg = (
+            f"Burst time:        {self.burst_time}\n"
+            f"Total Runtime:     {self.runtime}\n"
+            f"Waiting Time:      {self.waiting_time}\n"
+            f"Terminated:        {self.terminated_time}"
+        )
         return msg
 
     def __repr__(self):
@@ -99,8 +102,11 @@ class Process(object):
         # Arrival Time: <process.arrival_time>
         msg = ""
         msg += f"PID: {self.pid}\n"
-        msg += f"Burst Time: {self.burst_time}\n"
-        msg += f"Arrival Time: {self.arrival_time}"
+        msg += f"Burst Time:        {self.burst_time}\n"
+        msg += f"Arrival Time:      {self.arrival_time}"
+        if self.terminated_time is not None:
+            msg += "\n"
+            msg += self.get_meta()
         return msg
 
     def __str__(self):
@@ -119,6 +125,7 @@ class RoundRobin(tk.Tk):
         the text field of each label containing
         `Process` objects.
     """
+
     def __init__(self, filename="process_meta.csv", tasks=None):
         super().__init__()
 
@@ -167,7 +174,7 @@ class RoundRobin(tk.Tk):
         self.task_create = tk.Text(self.text_frame, height=2, bg="white", fg="black")
 
         # We place the `tasks_canvas` and `scrollbar` on the root
-        self.tasks_canvas.pack(side=tk.TOP, fill='both', expand=1)
+        self.tasks_canvas.pack(side=tk.TOP, fill="both", expand=1)
         self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
         # We create a new window to display the `tasks_canvas`.
@@ -188,7 +195,7 @@ class RoundRobin(tk.Tk):
             None,
             self.tasks_frame,
             text="Add process here. The process must have the form:\n"
-                 "<pid (int)> ; <arrival time (float)> ; <burst time (float)> ; ...",
+            "<pid (int)> ; <arrival time (float)> ; <burst time (float)> ; ...",
             bg="lightgrey",
             fg="black",
             pady=10,
@@ -232,8 +239,9 @@ class RoundRobin(tk.Tk):
         # animation. For further details, refer the method `self.manage_animation_thread`
         # Finally we pack the button onto our root.
         self.stop_bit = 0
-        self.start_animation = tk.Button(self, text="Start",
-                                         command=self.manage_animation_thread)
+        self.start_animation = tk.Button(
+            self, text="Start", command=self.manage_animation_thread
+        )
         self.start_animation.pack(side=tk.TOP)
 
     def manage_animation_thread(self):
@@ -251,16 +259,16 @@ class RoundRobin(tk.Tk):
            we clean the `self.tasks_canvas` by removing all the tasks. Finally, the text
            of the widget is changed to `Start` so the user can restart the animation.
         """
-        if self.start_animation['text'] == 'Start':
+        if self.start_animation["text"] == "Start":
             self.thread_for_animation = Thread(target=self.run_animation)
             self.stop_bit = 0
-            self.start_animation.config(text='Stop')
+            self.start_animation.config(text="Stop")
             self.finalize_tasks_list()
             self.thread_for_animation.start()
-        elif self.start_animation['text'] == 'Stop':
+        elif self.start_animation["text"] == "Stop":
             self.stop_bit = 1
             self.thread_for_animation.join()
-            self.start_animation.config(text='Start')
+            self.start_animation.config(text="Start")
             # for task in self.tasks:
             #     task.destroy()
             self.save_results()
@@ -269,49 +277,53 @@ class RoundRobin(tk.Tk):
             self.tasks.clear()
 
     def save_results(self):
-        """
-        self.pid = pid
-        self.burst_time = burst_time
-        self.arrival_time = arrival_time
-
-        # Attributes to do some book-keeping
-        # during scheduling
-        self.admitted_time = None
-        self.last_preempted = None
-        self.terminated_time = None
-        self.waiting_time = None
-        self.runtime = None
-        """
         try:
-            with open(self.filename, 'w') as f:
-                f.write("pid,burst_time,arrival_time,admitted_time,terminated_time,waiting_time\n")
+            with open(self.filename, "w") as f:
+                f.write(
+                    "pid,burst_time,arrival_time,admitted_time,terminated_time,waiting_time\n"
+                )
                 for task in self.terminated_tasks:
                     task_object = task.process_object
-                    f.write(f"{task_object.pid},{task_object.burst_time},{task_object.arrival_time},{task_object.admitted_time},{task_object.terminated_time},{task_object.waiting_time}\n")
+                    f.write(
+                        f"{task_object.pid}"
+                        f",{task_object.burst_time}"
+                        f",{task_object.arrival_time}"
+                        f",{task_object.admitted_time}"
+                        f",{task_object.terminated_time}"
+                        f",{task_object.waiting_time}\n"
+                    )
         except Exception as e:
             print(e.with_traceback())
-            msg.showerror(title="Error during saving", message="Cannot save results! Make sure the directory entered exists")
+            msg.showerror(
+                title="Error during saving",
+                message="Cannot save results! Make sure the directory entered exists",
+            )
 
     def display_results(self):
-        for task in self.terminated_tasks:
+        for i, task in enumerate(self.terminated_tasks):
+            self.set_task_color(i + 1, task)
             task.pack(side=tk.TOP, fill=tk.X)
-        self.recolor_tasks()
+            task.config(text=task.process_object.__repr__())
 
     def make_task(self, text):
         # Input is always in the form "PID; ARRIVAL_TIME; BURST_TIME"
         # We need to parse it so an `Process` object can be created
-        re_ex = r" *; *"
-        pattern = re.compile(re_ex)
-        attr = pattern.split(text)
-        task = Process(
-            pid = int(attr[0]),
-            arrival_time = int(attr[1]),
-            burst_time = int(attr[2])
-        )
-        return task
+        try:
+            re_ex = r" *; *"
+            pattern = re.compile(re_ex)
+            attr = pattern.split(text)
+            task = Process(
+                pid=int(attr[0]), arrival_time=int(attr[1]), burst_time=int(attr[2])
+            )
+            return task
+        except Exception as e:
+            msg.showerror(
+                title="Invalid input",
+                message="You have entered a invalid input. Please check and try again!",
+            )
 
     def add_task(self, event=None):
-        print("Event recorded: ", event)
+        # print("Event recorded: ", event)
         # We will first `get` the input that the user entered
         # in the `task_create` text box.
         task_text = self.task_create.get(1.0, tk.END).strip()
@@ -321,9 +333,11 @@ class RoundRobin(tk.Tk):
             # at the top of the canvas
             # Parse the task just arrived and create a process
             arrived_task = self.make_task(task_text)
-            new_task = tk.Label(arrived_task, self.tasks_frame, text=arrived_task, pady=10)
+            new_task = tk.Label(
+                arrived_task, self.tasks_frame, text=arrived_task, pady=10
+            )
 
-            self.set_task_color(len(self.tasks)+1, new_task)
+            self.set_task_color(len(self.tasks) + 1, new_task)
 
             # Place the new task onto the canvas.
             new_task.bind("<Button-1>", self.remove_task)
@@ -337,7 +351,7 @@ class RoundRobin(tk.Tk):
         self.task_create.delete(1.0, tk.END)
 
     def remove_task(self, event):
-        print("Event recorded: ", event)
+        # print("Event recorded: ", event)
         task = event.widget
         message = "Are you sure you want to delete"
         if msg.askyesno("Confirm!", message + ' "' + task.cget("text") + '"?'):
@@ -347,7 +361,7 @@ class RoundRobin(tk.Tk):
 
     def recolor_tasks(self):
         for index, task in enumerate(self.tasks):
-            self.set_task_color(index+1, task)
+            self.set_task_color(index + 1, task)
 
     def set_task_color(self, index, new_task):
         _, text_color_scheme = divmod(index, 2)
@@ -364,13 +378,13 @@ class RoundRobin(tk.Tk):
         self.tasks_canvas.configure(scrollregion=self.tasks_canvas.bbox("all"))
 
     def task_width(self, event):
-        print("Event recorded: ", event)
+        # print("Event recorded: ", event)
         canvas_width = event.width
         self.tasks_canvas.itemconfig(self.canvas_frame, width=canvas_width)
 
     def mouse_scroll(self, event):
-        print("Event recorded: ", event)
-        print(f"MouseScroll Delta: {event.delta}, MouseScroll Num: {event.num}")
+        # print("Event recorded: ", event)
+        # print(f"MouseScroll Delta: {event.delta}, MouseScroll Num: {event.num}")
         if event.delta:
             self.tasks_canvas.yview_scroll(int(-1 * event.delta / 120), "units")
         else:
@@ -402,14 +416,18 @@ class RoundRobin(tk.Tk):
         while True:
             if self.stop_bit == 1:
                 break
-            while (self.new_tasks and
-                self.new_tasks[0].process_object.arrival_time <= time_elapsed+1):
+            while (
+                self.new_tasks
+                and self.new_tasks[0].process_object.arrival_time <= time_elapsed + 1
+            ):
                 task = self.new_tasks.pop(0)
                 task.process_object.admitted_time = time_elapsed
                 task.process_object.last_preempted = time_elapsed
-                task.process_object.waiting_time = time_elapsed - task.process_object.arrival_time
+                task.process_object.waiting_time = (
+                    time_elapsed - task.process_object.arrival_time
+                )
                 task.process_object.runtime = 0
-                self.set_task_color(len(self.tasks)+1, task)
+                self.set_task_color(len(self.tasks) + 1, task)
                 task.pack(side=tk.TOP, fill=tk.X)
                 self.tasks.append(task)
             PREEMTED_OR_TERMINATED = 0
@@ -432,7 +450,7 @@ class RoundRobin(tk.Tk):
                     if task_object.runtime == task_object.burst_time:
                         self.placeholder_text.config(
                             text=f"Time Elapsed: {time_elapsed}\n"
-                                 f"Process {task_object.pid} Terminated"
+                            f"Process {task_object.pid} Terminated"
                         )
                         task_object.terminated_time = time_elapsed
                         task_object.last_preempted = time_elapsed
@@ -442,29 +460,29 @@ class RoundRobin(tk.Tk):
                         break
                     elif runtime == time_quantum:
                         task_object.last_preempted = time_elapsed
-                        self.set_task_color(len(self.tasks)+1, task)
+                        self.set_task_color(len(self.tasks) + 1, task)
                         task.pack(side=tk.TOP, fill=tk.X)
                         self.tasks.append(task)
                         self.placeholder_text.config(
                             text=f"Time Elapsed: {time_elapsed}\n"
-                                 f"Process {task_object.pid} Preempted"
+                            f"Process {task_object.pid} Preempted"
                         )
                         PREEMTED_OR_TERMINATED = 1
                         break
                     self.placeholder_text.config(
                         text=f"Time Elapsed: {time_elapsed}\n"
-                             f"Running Process {task_object.pid}\n"
-                             f"Runtime in this cycle: {runtime}\n"
-                             f"Other Meta Information:\n"
-                             f"{task_object.get_meta()}"
+                        f"Running Process {task_object.pid}\n"
+                        f"Runtime in this cycle: {runtime}\n"
+                        f"Other Meta Information:\n"
+                        f"{task_object.get_meta()}"
                     )
                     runtime += UNIT
                     task_object.runtime += UNIT
                     time_elapsed += UNIT
-                    time.sleep(2.0)
+                    time.sleep(0.5)
             if not PREEMTED_OR_TERMINATED:
                 time_elapsed += UNIT
-            time.sleep(2.0)
+            time.sleep(0.5)
 
 
 if __name__ == "__main__":
