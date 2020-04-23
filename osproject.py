@@ -88,10 +88,10 @@ class Process(object):
 
     def get_meta(self):
         msg = (
-            f"Burst time:        {self.burst_time}\n"
-            f"Total Runtime:     {self.runtime}\n"
-            f"Waiting Time:      {self.waiting_time}\n"
-            f"Terminated:        {self.terminated_time}"
+               f"Burst time:        {self.burst_time}\n"
+               f"Total Runtime:     {self.runtime}\n"
+               f"Waiting Time:      {self.waiting_time}\n"
+               f"Terminated:        {self.terminated_time}"
         )
         return msg
 
@@ -100,8 +100,7 @@ class Process(object):
         # PID: <process.id>
         # Burst Time: <process.burst_time>
         # Arrival Time: <process.arrival_time>
-        msg = ""
-        msg += f"PID: {self.pid}\n"
+        msg  = f"PID:               {self.pid}\n"
         msg += f"Burst Time:        {self.burst_time}\n"
         msg += f"Arrival Time:      {self.arrival_time}"
         if self.terminated_time is not None:
@@ -121,7 +120,7 @@ class RoundRobin(tk.Tk):
     ----------
     tasks: optional, list
         A list of tasks to be inserted at runtime.
-        The list must contain `tf.Label` objects with
+        The list must contain `tk.Label` objects with
         the text field of each label containing
         `Process` objects.
     """
@@ -162,7 +161,7 @@ class RoundRobin(tk.Tk):
             self.tasks = tasks
 
         # This is the title of our app.
-        self.title("To-Do-List")
+        self.title("Round Robin Algorithm")
 
         # This is the size of the canvas
         self.geometry("300x400")
