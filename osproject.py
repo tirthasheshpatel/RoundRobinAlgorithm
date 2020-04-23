@@ -29,6 +29,7 @@ requests.
 import time
 from threading import Thread
 import re
+import os
 import tkinter as tk
 import tkinter.messagebox as msg
 
@@ -79,8 +80,17 @@ class Process(object):
         # Attributes to do some book-keeping
         # during scheduling
         self.admitted_time = None
+        self.last_preempted = None
         self.terminated_time = None
-        self.runtime = 0
+        self.waiting_time = None
+        self.runtime = None
+
+    def get_meta(self):
+        msg = (f"Burst time: {self.burst_time}\n"
+               f"Total Runtime: {self.runtime}\n"
+               f"Waiting Time: {self.waiting_time}\n"
+               f"Terminated: {self.terminated_time}\n")
+        return msg
 
     def __repr__(self):
         # We return a message of the form
@@ -109,8 +119,10 @@ class RoundRobin(tk.Tk):
         the text field of each label containing
         `Process` objects.
     """
-    def __init__(self, tasks=None):
+    def __init__(self, filename="process_meta.csv", tasks=None):
         super().__init__()
+
+        self.filename = filename
 
         # We create a seperate canvas to put all
         # our tasks related widgets in.
@@ -249,10 +261,41 @@ class RoundRobin(tk.Tk):
             self.stop_bit = 1
             self.thread_for_animation.join()
             self.start_animation.config(text='Start')
-            for task in self.tasks:
-                task.destroy()
+            # for task in self.tasks:
+            #     task.destroy()
+            self.save_results()
+            self.display_results()
             self.new_tasks.clear()
             self.tasks.clear()
+
+    def save_results(self):
+        """
+        self.pid = pid
+        self.burst_time = burst_time
+        self.arrival_time = arrival_time
+
+        # Attributes to do some book-keeping
+        # during scheduling
+        self.admitted_time = None
+        self.last_preempted = None
+        self.terminated_time = None
+        self.waiting_time = None
+        self.runtime = None
+        """
+        try:
+            with open(self.filename, 'w') as f:
+                f.write("pid,burst_time,arrival_time,admitted_time,terminated_time,waiting_time\n")
+                for task in self.terminated_tasks:
+                    task_object = task.process_object
+                    f.write(f"{task_object.pid},{task_object.burst_time},{task_object.arrival_time},{task_object.admitted_time},{task_object.terminated_time},{task_object.waiting_time}\n")
+        except Exception as e:
+            print(e.with_traceback())
+            msg.showerror(title="Error during saving", message="Cannot save results! Make sure the directory entered exists")
+
+    def display_results(self):
+        for task in self.terminated_tasks:
+            task.pack(side=tk.TOP, fill=tk.X)
+        self.recolor_tasks()
 
     def make_task(self, text):
         # Input is always in the form "PID; ARRIVAL_TIME; BURST_TIME"
@@ -343,6 +386,7 @@ class RoundRobin(tk.Tk):
             task.pack_forget()
         self.tasks.clear()
         self.new_tasks = []
+        self.terminated_tasks = []
         for task in tmp_tasks:
             self.new_tasks.append(task)
 
@@ -361,6 +405,10 @@ class RoundRobin(tk.Tk):
             while (self.new_tasks and
                 self.new_tasks[0].process_object.arrival_time <= time_elapsed+1):
                 task = self.new_tasks.pop(0)
+                task.process_object.admitted_time = time_elapsed
+                task.process_object.last_preempted = time_elapsed
+                task.process_object.waiting_time = time_elapsed - task.process_object.arrival_time
+                task.process_object.runtime = 0
                 self.set_task_color(len(self.tasks)+1, task)
                 task.pack(side=tk.TOP, fill=tk.X)
                 self.tasks.append(task)
@@ -376,11 +424,9 @@ class RoundRobin(tk.Tk):
             else:
                 task = self.tasks.pop(0)
                 task_object = task.process_object
+                task_object.waiting_time += time_elapsed - task_object.last_preempted
                 task.pack_forget()
                 self.recolor_tasks()
-                if task_object.admitted_time is None:
-                    task_object.admitted_time = time_elapsed
-                    task_object.runtime = 0
                 runtime = 0
                 while True:
                     if task_object.runtime == task_object.burst_time:
@@ -389,10 +435,13 @@ class RoundRobin(tk.Tk):
                                  f"Process {task_object.pid} Terminated"
                         )
                         task_object.terminated_time = time_elapsed
-                        task.destroy()
+                        task_object.last_preempted = time_elapsed
+                        self.terminated_tasks.append(task)
+                        task.pack_forget()
                         PREEMTED_OR_TERMINATED = 1
                         break
                     elif runtime == time_quantum:
+                        task_object.last_preempted = time_elapsed
                         self.set_task_color(len(self.tasks)+1, task)
                         task.pack(side=tk.TOP, fill=tk.X)
                         self.tasks.append(task)
@@ -406,17 +455,16 @@ class RoundRobin(tk.Tk):
                         text=f"Time Elapsed: {time_elapsed}\n"
                              f"Running Process {task_object.pid}\n"
                              f"Runtime in this cycle: {runtime}\n"
-                             f"Total process runtime: {task_object.runtime}\n"
                              f"Other Meta Information:\n"
-                             f"{task_object}"
+                             f"{task_object.get_meta()}"
                     )
                     runtime += UNIT
                     task_object.runtime += UNIT
                     time_elapsed += UNIT
-                    time.sleep(0.5)
+                    time.sleep(2.0)
             if not PREEMTED_OR_TERMINATED:
                 time_elapsed += UNIT
-            time.sleep(0.5)
+            time.sleep(2.0)
 
 
 if __name__ == "__main__":
