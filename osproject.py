@@ -30,8 +30,16 @@ import time
 from threading import Thread
 import re
 import os
+import statistics
 import tkinter as tk
 import tkinter.messagebox as msg
+
+import numpy as np
+import matplotlib
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
+from matplotlib.figure import Figure
+matplotlib.use("TkAgg")
 
 # We are subclassing Tkinkter's `Label` object
 # to implement the less than (`<`) opertor which
@@ -268,18 +276,27 @@ class RoundRobin(tk.Tk):
             self.stop_bit = 1
             self.thread_for_animation.join()
             self.start_animation.config(text="Start")
-            # for task in self.tasks:
-            #     task.destroy()
+            self.tasks = self.terminated_tasks
             self.save_results()
             self.display_results()
+            self.calculate_metrics()
             self.new_tasks.clear()
-            self.tasks.clear()
+
+    def calculate_metrics(self):
+        """Calculates throughput, average turnaround time and average waiting time"""
+        self.throughput = statistics.mean([float(task.process_object.terminated_time) for task in self.terminated_tasks])
+        self.avg_turnaround_time = statistics.mean([float(task.process_object.terminated_time - task.process_object.admitted_time) for task in self.terminated_tasks])
+        self.avg_waiting_time = statistics.mean([float(task.process_object.waiting_time) for task in self.terminated_tasks])
+        self.placeholder_text.config(text=f"Throughput           :   {self.throughput:.4f}\n"
+                                          f"Avg. TurnAround Time :   {self.avg_turnaround_time:.4f}\n"
+                                          f"Avg. Waiting Time    :   {self.avg_waiting_time:.4f}\n"
+                                          f"No latency assumed. So, time to context switch is 0.")
 
     def save_results(self):
         try:
             with open(self.filename, "w") as f:
                 f.write(
-                    "pid,burst_time,arrival_time,admitted_time,terminated_time,waiting_time\n"
+                    "pid,burst_time,arrival_time,admitted_time,terminated_time,waiting_time,turnaround_time\n"
                 )
                 for task in self.terminated_tasks:
                     task_object = task.process_object
@@ -289,7 +306,8 @@ class RoundRobin(tk.Tk):
                         f",{task_object.arrival_time}"
                         f",{task_object.admitted_time}"
                         f",{task_object.terminated_time}"
-                        f",{task_object.waiting_time}\n"
+                        f",{task_object.waiting_time}"
+                        f",{task_object.terminated_time-task_object.admitted_time}\n"
                     )
         except Exception as e:
             print(e.with_traceback())
@@ -297,12 +315,14 @@ class RoundRobin(tk.Tk):
                 title="Error during saving",
                 message="Cannot save results! Make sure the directory entered exists",
             )
+            raise e
 
     def display_results(self):
         for i, task in enumerate(self.terminated_tasks):
-            self.set_task_color(i + 1, task)
+            task.bind("<Button-1>", self.remove_task)
             task.pack(side=tk.TOP, fill=tk.X)
             task.config(text=task.process_object.__repr__())
+        self.recolor_tasks()
 
     def make_task(self, text):
         # Input is always in the form "PID; ARRIVAL_TIME; BURST_TIME"
@@ -320,6 +340,7 @@ class RoundRobin(tk.Tk):
                 title="Invalid input",
                 message="You have entered a invalid input. Please check and try again!",
             )
+            raise e
 
     def add_task(self, event=None):
         # print("Event recorded: ", event)
