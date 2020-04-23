@@ -34,12 +34,12 @@ import statistics
 import tkinter as tk
 import tkinter.messagebox as msg
 
-import numpy as np
-import matplotlib
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
-from matplotlib.figure import Figure
-matplotlib.use("TkAgg")
+# import numpy as np
+# import matplotlib
+# import matplotlib.pyplot as plt
+# from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
+# from matplotlib.figure import Figure
+# matplotlib.use("TkAgg")
 
 # We are subclassing Tkinkter's `Label` object
 # to implement the less than (`<`) opertor which
@@ -441,7 +441,6 @@ class RoundRobin(tk.Tk):
                 and self.new_tasks[0].process_object.arrival_time <= time_elapsed + 1
             ):
                 task = self.new_tasks.pop(0)
-                task.process_object.admitted_time = time_elapsed
                 task.process_object.last_preempted = time_elapsed
                 task.process_object.waiting_time = (
                     time_elapsed - task.process_object.arrival_time
@@ -465,6 +464,9 @@ class RoundRobin(tk.Tk):
                 task_object.waiting_time += time_elapsed - task_object.last_preempted
                 task.pack_forget()
                 self.recolor_tasks()
+                if task_object.admitted_time is None:
+                    task_object.admitted_time = time_elapsed
+                    task_object.runtime = 0
                 runtime = 0
                 while True:
                     if task_object.runtime == task_object.burst_time:
