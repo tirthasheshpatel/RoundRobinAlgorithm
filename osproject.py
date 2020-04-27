@@ -531,7 +531,9 @@ class RoundRobin(tk.Tk):
         time_elapsed = 0.0
         while True:
             if not self.tasks and not self.new_tasks:
-                self.manage_animation_thread()
+                self.placeholder_text.config(
+                    text=f"Finished! Press 'Stop' to stop the animation."
+                )
             if self.stop_bit == 1:
                 break
             self.get_new_tasks(time_elapsed)
