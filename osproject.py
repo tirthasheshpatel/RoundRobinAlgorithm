@@ -253,8 +253,8 @@ class RoundRobin(tk.Tk):
         )
         self.start_animation.pack(side=tk.TOP)
         self.time_quantum_method = tk.StringVar(self)
-        self.time_quantum_method.set('Arithmetic')
-        methods = {'Arithmetic', 'Geometric', 'Harmonic'}
+        self.time_quantum_method.set("Arithmetic")
+        methods = {"Arithmetic", "Geometric", "Harmonic"}
         self.methods_menu = tk.OptionMenu(self, self.time_quantum_method, *methods)
         self.methods_menu.pack(side=tk.TOP)
 
@@ -451,15 +451,19 @@ class RoundRobin(tk.Tk):
         self.terminated_tasks = []
         for task in tmp_tasks:
             self.new_tasks.append(task)
-    
+
     def get_time_quantum(self):
         method = self.time_quantum_method.get()
-        if method == 'Arithmetic':
-            tq = statistics.mean([task.process_object.burst_time for task in self.tasks])
-        elif method == 'Geometric':
+        if method == "Arithmetic":
+            tq = statistics.mean(
+                [task.process_object.burst_time for task in self.tasks]
+            )
+        elif method == "Geometric":
             tq = math.sqrt(sum([task.process_object.burst_time for task in self.tasks]))
-        elif method == 'Harmonic':
-            tq = 1./statistics.mean([1./task.process_object.burst_time for task in self.tasks])
+        elif method == "Harmonic":
+            tq = 1.0 / statistics.mean(
+                [1.0 / task.process_object.burst_time for task in self.tasks]
+            )
         return round(tq, 1)
 
     def get_new_tasks(self, time_elapsed):
@@ -473,7 +477,7 @@ class RoundRobin(tk.Tk):
                 time_elapsed - task.process_object.arrival_time
             )
             task.process_object.admitted_time = time_elapsed
-            task.process_object.runtime = 0.
+            task.process_object.runtime = 0.0
             self.set_task_color(len(self.tasks) + 1, task)
             task.pack(side=tk.TOP, fill=tk.X)
             self.tasks.append(task)
@@ -575,11 +579,11 @@ class RoundRobin(tk.Tk):
                     task_object.runtime = round(task_object.runtime + 0.1, 1)
                     self.get_new_tasks(time_elapsed)
                     time_elapsed = round(time_elapsed + 0.1, 1)
-                    time.sleep(0.1)
+                    time.sleep(0.05)
             if not PREEMTED_OR_TERMINATED:
                 self.get_new_tasks(time_elapsed)
                 time_elapsed = round(time_elapsed + 0.1, 1)
-            time.sleep(0.1)
+            time.sleep(0.05)
 
 
 if __name__ == "__main__":
