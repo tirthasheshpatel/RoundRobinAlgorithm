@@ -530,6 +530,8 @@ class RoundRobin(tk.Tk):
         time_quantum = 1.0
         time_elapsed = 0.0
         while True:
+            if not self.tasks and not self.new_tasks:
+                self.manage_animation_thread()
             if self.stop_bit == 1:
                 break
             self.get_new_tasks(time_elapsed)
@@ -587,11 +589,11 @@ class RoundRobin(tk.Tk):
                     task_object.runtime = round(task_object.runtime + 0.1, 1)
                     self.get_new_tasks(time_elapsed)
                     time_elapsed = round(time_elapsed + 0.1, 1)
-                    time.sleep(0.01)
+                    time.sleep(0.1)
             if not PREEMTED_OR_TERMINATED:
                 self.get_new_tasks(time_elapsed)
                 time_elapsed = round(time_elapsed + 0.1, 1)
-            time.sleep(0.01)
+            time.sleep(0.1)
 
 
 if __name__ == "__main__":
