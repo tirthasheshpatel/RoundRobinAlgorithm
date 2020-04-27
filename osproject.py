@@ -504,16 +504,16 @@ class RoundRobin(tk.Tk):
                 𝑞𝑡 = 𝐻𝑎𝑟𝑚𝑜𝑛𝑖𝑐 𝑀𝑒𝑎𝑛 𝑜𝑓 𝐵𝑢𝑟𝑠𝑡 𝑇𝑖𝑚𝑒𝑠
 
         4. Assign 𝑞𝑡 to processes (P)
-        𝑃𝑖 ← 𝑞𝑡
-        𝑖 = 𝑖 + 1
+                    𝑃𝑖 ← 𝑞𝑡
+                    𝑖 = 𝑖 + 1
 
         5. If (i<number of processes) then go to step 4
 
         6. If a new process is arrived:
-        Update ready queue and go to step 3
+           Update ready queue and go to step 3
 
         7. Calculate average turnaround time, average waiting
-        time and context switches
+           time and context switches
 
         8. End
 
