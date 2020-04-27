@@ -518,6 +518,14 @@ class RoundRobin(tk.Tk):
         8. End
 
         ==============================================================
+
+        References
+        ----------
+        [1]: Fillian Janine G. Marcelino, Mayumi T. Escubio,
+             and Rey Benjamin M. Baquirin, 2020,
+             A Comparative Analysis of Quantum Time based on Arithmetic,
+             Geometric, and Harmonic Mean for Dynamic Round Robin
+             Scheduling
         """
         time_quantum = 1.0
         time_elapsed = 0.0
@@ -579,11 +587,11 @@ class RoundRobin(tk.Tk):
                     task_object.runtime = round(task_object.runtime + 0.1, 1)
                     self.get_new_tasks(time_elapsed)
                     time_elapsed = round(time_elapsed + 0.1, 1)
-                    time.sleep(0.05)
+                    time.sleep(0.01)
             if not PREEMTED_OR_TERMINATED:
                 self.get_new_tasks(time_elapsed)
                 time_elapsed = round(time_elapsed + 0.1, 1)
-            time.sleep(0.05)
+            time.sleep(0.01)
 
 
 if __name__ == "__main__":
