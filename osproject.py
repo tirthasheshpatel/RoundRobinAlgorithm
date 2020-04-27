@@ -30,6 +30,7 @@ import time
 from threading import Thread
 import re
 import os
+import math
 import statistics
 import tkinter as tk
 import tkinter.messagebox as msg
@@ -98,7 +99,7 @@ class Process(object):
         msg = (
             f"Burst time:   \t{self.burst_time}\n"
             f"Total Runtime:\t{self.runtime}\n"
-            f"Waiting Time: \t{self.waiting_time}\n"
+            # f"Waiting Time: \t{self.waiting_time:.1f}\n"
             f"Terminated:   \t{self.terminated_time}"
         )
         return msg
@@ -109,8 +110,8 @@ class Process(object):
         # Burst Time: <process.burst_time>
         # Arrival Time: <process.arrival_time>
         msg = f"PID:\t\t{self.pid}\n"
-        msg += f"Burst Time:\t{self.burst_time}\n"
-        msg += f"Arrival Time:\t{self.arrival_time}"
+        msg += f"Burst Time:\t{self.burst_time:.1f}\n"
+        msg += f"Arrival Time:\t{self.arrival_time:.1f}"
         if self.terminated_time is not None:
             msg += "\n"
             msg += self.get_meta()
@@ -251,6 +252,11 @@ class RoundRobin(tk.Tk):
             self, text="Start", command=self.manage_animation_thread
         )
         self.start_animation.pack(side=tk.TOP)
+        self.time_quantum_method = tk.StringVar(self)
+        self.time_quantum_method.set('Arithmetic')
+        methods = {'Arithmetic', 'Geometric', 'Harmonic'}
+        self.methods_menu = tk.OptionMenu(self, self.time_quantum_method, *methods)
+        self.methods_menu.pack(side=tk.TOP)
 
     def manage_animation_thread(self):
         """Manages the animation thread. It is triggers to start and stop
@@ -445,57 +451,101 @@ class RoundRobin(tk.Tk):
         self.terminated_tasks = []
         for task in tmp_tasks:
             self.new_tasks.append(task)
+    
+    def get_time_quantum(self):
+        method = self.time_quantum_method.get()
+        if method == 'Arithmetic':
+            tq = statistics.mean([task.process_object.burst_time for task in self.tasks])
+        elif method == 'Geometric':
+            tq = math.sqrt(sum([task.process_object.burst_time for task in self.tasks]))
+        elif method == 'Harmonic':
+            tq = 1./statistics.mean([1./task.process_object.burst_time for task in self.tasks])
+        return round(tq, 1)
+
+    def get_new_tasks(self, time_elapsed):
+        while (
+            self.new_tasks
+            and self.new_tasks[0].process_object.arrival_time <= time_elapsed
+        ):
+            task = self.new_tasks.pop(0)
+            task.process_object.last_preempted = time_elapsed
+            task.process_object.waiting_time = (
+                time_elapsed - task.process_object.arrival_time
+            )
+            task.process_object.admitted_time = time_elapsed
+            task.process_object.runtime = 0.
+            self.set_task_color(len(self.tasks) + 1, task)
+            task.pack(side=tk.TOP, fill=tk.X)
+            self.tasks.append(task)
 
     def run_animation(self):
-        """The core animation method.
-        All the animation magic happens here.
+        """The core animation method. All the animation magic happens here.
         It is run by a thread `RoundRobinObject.thread_for_animation`
         You can operate on the thread if needed.
+
+        ===========================================================
+                                ALGORITHM
+        ============================================================
+
+        1. All the present processes are assigned to ready queue
+
+        2. While (ready queue is not empty)
+
+        3. Calculate quantum time (𝑞𝑡 ) using different means:
+
+                𝑞𝑡 = 𝐴𝑟𝑖𝑡ℎ𝑚𝑒𝑡𝑖𝑐 𝑀𝑒𝑎𝑛 𝑜𝑓 𝐵𝑢𝑟𝑠𝑡 𝑇𝑖𝑚𝑒𝑠
+                                or
+                𝑞𝑡 = 𝐺𝑒𝑜𝑚𝑒𝑡𝑟𝑖𝑐 𝑀𝑒𝑎𝑛 𝑜𝑓 𝐵𝑢𝑟𝑠𝑡 𝑇𝑖𝑚𝑒𝑠
+                                or
+                𝑞𝑡 = 𝐻𝑎𝑟𝑚𝑜𝑛𝑖𝑐 𝑀𝑒𝑎𝑛 𝑜𝑓 𝐵𝑢𝑟𝑠𝑡 𝑇𝑖𝑚𝑒𝑠
+
+        4. Assign 𝑞𝑡 to processes (P)
+        𝑃𝑖 ← 𝑞𝑡
+        𝑖 = 𝑖 + 1
+
+        5. If (i<number of processes) then go to step 4
+
+        6. If a new process is arrived:
+        Update ready queue and go to step 3
+
+        7. Calculate average turnaround time, average waiting
+        time and context switches
+
+        8. End
+
+        ==============================================================
         """
-        UNIT = 1
-        time_quantum = UNIT
-        time_elapsed = 0
+        time_quantum = 1.0
+        time_elapsed = 0.0
         while True:
             if self.stop_bit == 1:
                 break
-            while (
-                self.new_tasks
-                and self.new_tasks[0].process_object.arrival_time <= time_elapsed
-            ):
-                task = self.new_tasks.pop(0)
-                task.process_object.last_preempted = time_elapsed
-                task.process_object.waiting_time = (
-                    time_elapsed - task.process_object.arrival_time
-                )
-                task.process_object.admitted_time = time_elapsed
-                # task.process_object.waiting_time = 0
-                task.process_object.runtime = 0
-                self.set_task_color(len(self.tasks) + 1, task)
-                task.pack(side=tk.TOP, fill=tk.X)
-                self.tasks.append(task)
+            self.get_new_tasks(time_elapsed)
             PREEMTED_OR_TERMINATED = 0
             if not self.tasks:
                 self.placeholder_text.config(
-                    text=f"Time Elapsed: {time_elapsed}\nCPU Idle"
+                    text=f"Time Elapsed: {time_elapsed:.1f}\nCPU Idle"
                 )
             elif self.tasks[0].process_object.arrival_time > time_elapsed:
                 self.placeholder_text.config(
-                    text=f"Time Elapsed: {time_elapsed}\nCPU Idle"
+                    text=f"Time Elapsed: {time_elapsed:.1f}\nCPU Idle"
                 )
             else:
+                time_quantum = self.get_time_quantum()
                 task = self.tasks.pop(0)
                 task_object = task.process_object
                 task_object.waiting_time += time_elapsed - task_object.last_preempted
                 task.pack_forget()
                 self.recolor_tasks()
-                if task_object.admitted_time is None:
-                    task_object.admitted_time = time_elapsed
-                    task_object.runtime = 0
-                runtime = 0
+                # if task_object.admitted_time is None:
+                #     task_object.admitted_time = time_elapsed
+                #     task_object.runtime = 0.
+                runtime = 0.0
                 while True:
                     if task_object.runtime == task_object.burst_time:
+                        # time_elapsed -= task_object.runtime - task_object.burst_time
                         self.placeholder_text.config(
-                            text=f"Time Elapsed: {time_elapsed}\n"
+                            text=f"Time Elapsed: {time_elapsed:.1f}\n"
                             f"Process {task_object.pid} Terminated"
                         )
                         task_object.terminated_time = time_elapsed
@@ -510,25 +560,26 @@ class RoundRobin(tk.Tk):
                         task.pack(side=tk.TOP, fill=tk.X)
                         self.tasks.append(task)
                         self.placeholder_text.config(
-                            text=f"Time Elapsed: {time_elapsed}\n"
+                            text=f"Time Elapsed: {time_elapsed:.1f}\n"
                             f"Process {task_object.pid} Preempted"
                         )
                         PREEMTED_OR_TERMINATED = 1
                         break
                     self.placeholder_text.config(
-                        text=f"Time Elapsed:\t\t{time_elapsed}\n"
-                        f"Running Process\t\t{task_object.pid}\n"
-                        f"Runtime in this cycle:\t{runtime}\n"
-                        f"Other Meta Information:\n"
+                        text=f"Time Elapsed:\t{time_elapsed:.1f}\n"
+                        f"Running Process\t{task_object.pid}\n"
+                        f"Runtime in this cycle: {runtime:.1f}\n"
                         f"{task_object.get_meta()}"
                     )
-                    runtime += UNIT
-                    task_object.runtime += UNIT
-                    time_elapsed += UNIT
-                    time.sleep(2)
+                    runtime = round(runtime + 0.1, 1)
+                    task_object.runtime = round(task_object.runtime + 0.1, 1)
+                    self.get_new_tasks(time_elapsed)
+                    time_elapsed = round(time_elapsed + 0.1, 1)
+                    time.sleep(0.1)
             if not PREEMTED_OR_TERMINATED:
-                time_elapsed += UNIT
-            time.sleep(2)
+                self.get_new_tasks(time_elapsed)
+                time_elapsed = round(time_elapsed + 0.1, 1)
+            time.sleep(0.1)
 
 
 if __name__ == "__main__":
